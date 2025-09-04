@@ -11,10 +11,10 @@ const ChatUI = () => {
     if (storedSeed) {
       const parsed = JSON.parse(storedSeed);
       setSeed(parsed.answers);
+      console.log("🌱 Loaded seed from localStorage:", parsed.answers);
     }
   }, []);
 
-  // Automatically trigger first Echo message
   useEffect(() => {
     if (seed && messages.length === 0) {
       sendMessageToGPT(
@@ -29,6 +29,9 @@ const ChatUI = () => {
     if (!isSystem) {
       setMessages((prev) => [...prev, { from: "user", text }]);
     }
+
+    console.log("📤 Sending to GPT:", text);
+    console.log("🧠 Current messages:", messages);
 
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -59,12 +62,13 @@ const ChatUI = () => {
       const reply = data.choices?.[0]?.message?.content;
 
       if (reply) {
+        console.log("✅ GPT reply:", reply);
         setMessages((prev) => [...prev, { from: "assistant", text: reply }]);
       } else {
-        console.error("No reply from GPT:", data);
+        console.error("❌ No reply received from GPT. Full data:", data);
       }
     } catch (err) {
-      console.error("Error:", err);
+      console.error("🚨 Error calling GPT:", err);
     }
 
     setInput("");
