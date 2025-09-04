@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import questions from "../data/questions";
 
-function SeedForm({ onComplete }) {
+function SeedForm({ onSeedSubmit }) {
   const [answers, setAnswers] = useState(Array(questions.length).fill(""));
   const [current, setCurrent] = useState(0);
 
@@ -15,17 +15,20 @@ function SeedForm({ onComplete }) {
     if (current < questions.length - 1) {
       setCurrent(current + 1);
     } else {
+      // Save to localStorage (optional)
       const seedObject = {
         answers,
         timestamp: new Date().toISOString()
       };
       localStorage.setItem("echo_seed", JSON.stringify(seedObject));
-      onComplete();
+
+      // ✅ Pass seed data back to App.jsx
+      onSeedSubmit(answers);
     }
   };
 
   return (
-    <div>
+    <div style={{ padding: "2rem", maxWidth: "600px", margin: "auto" }}>
       <h2>Welcome to Echo</h2>
       <p>{questions[current]}</p>
       <textarea
