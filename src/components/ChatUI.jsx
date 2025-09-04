@@ -4,10 +4,9 @@ const ChatUI = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [seed, setSeed] = useState(null);
-  const [initialised, setInitialised] = useState(false);
   const chatRef = useRef(null);
+  const DEBUG = true; // Set to false to hide console logs
 
-  // Load seed from localStorage
   useEffect(() => {
     const storedSeed = localStorage.getItem("echo_seed");
     if (storedSeed) {
@@ -16,48 +15,31 @@ const ChatUI = () => {
     }
   }, []);
 
-  // Initialise Echo with seed once it's loaded
   useEffect(() => {
-    if (seed && !initialised) {
-      initialiseEcho(seed);
+    if (seed && messages.length === 0) {
+      sendMessageToGPT(
+        "[SYSTEM INIT] Begin with one gentle but insightful question based on the user's seed data.",
+        true
+      );
     }
-  }, [seed, initialised]);
+  }, [seed]);
 
-  const initialiseEcho = async (seedData) => {
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: ${JSON.stringify(
-                seedData
-              )}. Begin with one gentle but insightful question based on the above.`,
-            },
-          ],
-        }),
-      });
-
-      const data = await response.json();
-      const reply = data.choices[0].message.content;
-      setMessages([{ from: "echo", text: reply }]);
-      setInitialised(true);
-    } catch (err) {
-      console.error("Initialisation Error:", err);
-    }
+  const buildSystemPrompt = () => {
+    if (!seed) return "";
+    return (
+      "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading.\n\n" +
+      "Seed reflections provided by the user include:\n" +
+      seed.map((s, i) => `${i + 1}. ${s}`).join("\n") +
+      "\n\nUse these to guide your tone, questions, and support. Begin with one gentle but insightful question based on the above."
+    );
   };
 
-  const sendMessageToGPT = async (text) => {
+  const sendMessageToGPT = async (text, isSystem = false) => {
     if (!text.trim()) return;
 
-    const updatedMessages = [...messages, { from: "user", text }];
-    setMessages(updatedMessages);
+    if (!isSystem) {
+      setMessages((prev) => [...prev, { from: "user", text }]);
+    }
 
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -71,23 +53,30 @@ const ChatUI = () => {
           messages: [
             {
               role: "system",
-              content: `You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: ${JSON.stringify(
-                seed
-              )}.`,
+              content: buildSystemPrompt(),
             },
-            ...updatedMessages.map((msg) => ({
-              role: msg.from === "user" ? "user" : "assistant",
-              content: msg.text,
-            })),
+            ...messages
+              .filter((msg) => msg.from !== "system")
+              .map((msg) => ({
+                role: msg.from === "user" ? "user" : "assistant",
+                content: msg.text,
+              })),
+            { role: "user", content: text },
           ],
         }),
       });
 
       const data = await response.json();
-      const reply = data.choices[0].message.content;
-      setMessages((prev) => [...prev, { from: "echo", text: reply }]);
+      if (DEBUG) console.log("GPT API response:", data);
+
+      const reply = data.choices?.[0]?.message?.content;
+      if (reply) {
+        setMessages((prev) => [...prev, { from: "echo", text: reply }]);
+      } else {
+        console.error("No reply from GPT:", data);
+      }
     } catch (err) {
-      console.error("Chat Error:", err);
+      console.error("API Error:", err);
     }
 
     setInput("");
