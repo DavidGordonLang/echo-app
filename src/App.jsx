@@ -1,23 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import SeedForm from "./components/SeedForm";
-import ChatUI from "./components/ChatUI"; // coming soon
+import ChatUI from "./components/ChatUI";
 
 function App() {
-  const [seeded, setSeeded] = useState(false);
+  const [seedData, setSeedData] = useState(null);
 
-  useEffect(() => {
-    const storedSeed = localStorage.getItem("echo_seed");
-    if (storedSeed) setSeeded(true);
-  }, []);
+  const handleSeedSubmit = (responses) => {
+    setSeedData(responses);
+  };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      {seeded ? (
-        <ChatUI />
+    <>
+      {seedData ? (
+        <ChatUI seed={seedData} />
       ) : (
-        <SeedForm onComplete={() => setSeeded(true)} />
+        <SeedForm onSeedSubmit={handleSeedSubmit} />
       )}
-    </div>
+    </>
   );
 }
 
