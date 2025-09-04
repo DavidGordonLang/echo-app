@@ -14,16 +14,18 @@ const ChatUI = () => {
     }
   }, []);
 
+  // Automatically trigger first Echo message
   useEffect(() => {
     if (seed && messages.length === 0) {
-      sendMessageToGPT("[SYSTEM]\nYou are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: " + JSON.stringify(seed) + ". Begin with one gentle but insightful question based on the above.", true);
+      sendMessageToGPT(
+        "Begin with one gentle but insightful question based on the user's seed data."
+      );
     }
   }, [seed]);
 
   const sendMessageToGPT = async (text, isSystem = false) => {
     if (!text.trim()) return;
 
-    // Avoid echoing system message to user view
     if (!isSystem) {
       setMessages((prev) => [...prev, { from: "user", text }]);
     }
@@ -44,20 +46,23 @@ const ChatUI = () => {
                 "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: " +
                 JSON.stringify(seed),
             },
-            ...messages
-              .filter((msg) => msg.from !== "system")
-              .map((msg) => ({
-                role: msg.from === "user" ? "user" : "assistant",
-                content: msg.text,
-              })),
+            ...messages.map((msg) => ({
+              role: msg.from === "user" ? "user" : "assistant",
+              content: msg.text,
+            })),
             { role: "user", content: text },
           ],
         }),
       });
 
       const data = await response.json();
-      const reply = data.choices[0].message.content;
-      setMessages((prev) => [...prev, { from: "echo", text: reply }]);
+      const reply = data.choices?.[0]?.message?.content;
+
+      if (reply) {
+        setMessages((prev) => [...prev, { from: "assistant", text: reply }]);
+      } else {
+        console.error("No reply from GPT:", data);
+      }
     } catch (err) {
       console.error("Error:", err);
     }
