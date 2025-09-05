@@ -5,34 +5,31 @@ const ChatUI = () => {
   const [input, setInput] = useState("");
   const [seed, setSeed] = useState(null);
   const [initialised, setInitialised] = useState(false);
+  const [mode, setMode] = useState("balanced"); // Default mode
+  const [replyCount, setReplyCount] = useState(0); // Track Echo replies
   const chatRef = useRef(null);
 
-  // Mode can be switched in future via UI
-  const mode = "balanced"; // options: balanced, mirror, analyst, guide, scribe, critical
-
-  // Load seed from localStorage
+  // Load seed + history from localStorage
   useEffect(() => {
     const storedSeed = localStorage.getItem("echo_seed");
     if (storedSeed) {
       const parsed = JSON.parse(storedSeed);
       setSeed(parsed.answers);
     }
-
-    // Reload old conversation if available
     const storedMessages = localStorage.getItem("echo_messages");
     if (storedMessages) {
       setMessages(JSON.parse(storedMessages));
     }
   }, []);
 
-  // Save conversation history to localStorage on every change
+  // Save history to localStorage
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("echo_messages", JSON.stringify(messages));
     }
   }, [messages]);
 
-  // Initialise Echo with seed
+  // Init Echo with seed
   useEffect(() => {
     if (seed && !initialised) {
       initialiseEcho(seed);
@@ -58,12 +55,14 @@ You are Echo — not a chatbot or life coach. You are a mirror, challenger, and 
 Seed data: ${JSON.stringify(seedData)}
 
 Core rules:
-- Echo is conversational, not scripted. You don’t have to ask a question every time. Expand, reflect, or challenge when it makes sense.
-- Avoid repeating questions or points already raised in this conversation.
-- Balance warmth with confrontation: supportive but not flattering.
-- Never generic or cliché. No “you’ve got this.”
+- Be conversational. Don’t force a question every time — expand, reflect, or challenge when natural.
+- Avoid repeating questions already asked.
+- Balance warmth with confrontation — supportive but not flattering.
+- Never generic or cliché (no “you’ve got this”).
 - Push toward clarity and insight, even if uncomfortable.
-- Current mode: ${mode}. If mode=critical, be direct, harsh, and overly critical when useful.
+- Current mode: ${mode}.
+- Critical mode = direct, harsh, overly critical when useful.
+- After 5 replies, offer the user a small, actionable reflective task instead of a question.
               `,
             },
           ],
@@ -75,6 +74,7 @@ Core rules:
         data?.choices?.[0]?.message?.content ||
         "Sorry, I didn’t catch that. Try again?";
       setMessages([{ from: "echo", text: reply }]);
+      setReplyCount(1);
     } catch (err) {
       console.error("🚨 Init Error:", err);
       setMessages([
@@ -106,12 +106,14 @@ You are Echo — not a chatbot or life coach. You are a mirror, challenger, and 
 Seed data: ${JSON.stringify(seed)}
 
 Core rules:
-- Echo is conversational, not scripted. You don’t have to ask a question every time. Expand, reflect, or challenge when it makes sense.
-- Avoid repeating questions or points already raised in this conversation.
-- Balance warmth with confrontation: supportive but not flattering.
-- Never generic or cliché. No “you’ve got this.”
+- Be conversational. Don’t force a question every time — expand, reflect, or challenge when natural.
+- Avoid repeating questions already asked.
+- Balance warmth with confrontation — supportive but not flattering.
+- Never generic or cliché (no “you’ve got this”).
 - Push toward clarity and insight, even if uncomfortable.
-- Current mode: ${mode}. If mode=critical, be direct, harsh, and overly critical when useful.
+- Current mode: ${mode}.
+- Critical mode = direct, harsh, overly critical when useful.
+- If this is Echo’s 5th response since seeding, stop asking questions and instead propose a small reflective task drawn from what the user has shared.
               `,
             },
             ...messages.map((msg) => ({
@@ -128,6 +130,7 @@ Core rules:
         data?.choices?.[0]?.message?.content ||
         "Sorry, I didn’t catch that. Try again?";
       setMessages((prev) => [...prev, { from: "echo", text: reply }]);
+      setReplyCount((prev) => prev + 1);
     } catch (err) {
       console.error("🚨 Chat Error:", err);
       setMessages((prev) => [
@@ -143,9 +146,26 @@ Core rules:
     sendMessageToGPT(input);
   };
 
+  const toggleMode = () => {
+    setMode((prev) => (prev === "balanced" ? "critical" : "balanced"));
+  };
+
   return (
     <div style={{ padding: "2rem" }}>
       <h1>Echo</h1>
+      <button
+        onClick={toggleMode}
+        style={{
+          marginBottom: "1rem",
+          padding: "0.5rem 1rem",
+          background: mode === "critical" ? "#ff4d4d" : "#ccc",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+        }}
+      >
+        Mode: {mode}
+      </button>
       <div
         style={{
           border: "1px solid #ccc",
