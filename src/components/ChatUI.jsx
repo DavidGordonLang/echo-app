@@ -18,7 +18,9 @@ const ChatUI = () => {
   // Kick off the first Echo message once seed is loaded
   useEffect(() => {
     if (seed && messages.length === 0) {
-      sendMessageToGPT("Begin with one gentle but insightful question based on the user's seed data.");
+      sendMessageToGPT(
+        "Begin with one gentle but insightful question based on the user's seed data."
+      );
     }
   }, [seed]);
 
@@ -33,7 +35,7 @@ const ChatUI = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          Authorization: `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -56,11 +58,16 @@ const ChatUI = () => {
       const data = await res.json();
       console.log("🔍 OpenAI API Response:", data);
 
-      const reply = data?.choices?.[0]?.message?.content || "Sorry, I didn’t catch that. Try again?";
+      const reply =
+        data?.choices?.[0]?.message?.content ||
+        "Sorry, I didn’t catch that. Try again?";
       setMessages((prev) => [...prev, { from: "echo", text: reply }]);
     } catch (err) {
-      console.error("API Error:", err);
-      setMessages((prev) => [...prev, { from: "echo", text: "There was a problem reaching Echo. Try again shortly." }]);
+      console.error("🚨 API Error:", err);
+      setMessages((prev) => [
+        ...prev,
+        { from: "echo", text: "There was a problem reaching Echo. Try again shortly." },
+      ]);
     }
 
     setInput("");
