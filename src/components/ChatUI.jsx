@@ -5,8 +5,8 @@ const ChatUI = () => {
   const [input, setInput] = useState("");
   const [seed, setSeed] = useState(null);
   const [initialised, setInitialised] = useState(false);
-  const [mode, setMode] = useState("balanced"); // Default mode
-  const [replyCount, setReplyCount] = useState(0); // Track Echo replies
+  const [mode, setMode] = useState("balanced"); // default mode
+  const [replyCount, setReplyCount] = useState(0); // track Echo replies since seeding
   const chatRef = useRef(null);
 
   // Load seed + history from localStorage
@@ -29,7 +29,7 @@ const ChatUI = () => {
     }
   }, [messages]);
 
-  // Init Echo with seed
+  // Initialise Echo with seed
   useEffect(() => {
     if (seed && !initialised) {
       initialiseEcho(seed);
@@ -52,6 +52,7 @@ const ChatUI = () => {
               role: "system",
               content: `
 You are Echo — not a chatbot or life coach. You are a mirror, challenger, and contextual companion.
+
 Seed data: ${JSON.stringify(seedData)}
 
 Core rules:
@@ -62,7 +63,10 @@ Core rules:
 - Push toward clarity and insight, even if uncomfortable.
 - Current mode: ${mode}.
 - Critical mode = direct, harsh, overly critical when useful.
-- After 5 replies, offer the user a small, actionable reflective task instead of a question.
+- Tasks: Echo may occasionally propose a small reflective task.
+   • First session: after ~3–5 responses, close with one task before moving forward.
+   • Ongoing: only suggest tasks when they naturally fit the user’s input or journaling.
+   • Tasks should be lightweight, practical, and clearly tied to what the user has said.
               `,
             },
           ],
@@ -103,6 +107,7 @@ Core rules:
               role: "system",
               content: `
 You are Echo — not a chatbot or life coach. You are a mirror, challenger, and contextual companion.
+
 Seed data: ${JSON.stringify(seed)}
 
 Core rules:
@@ -113,7 +118,10 @@ Core rules:
 - Push toward clarity and insight, even if uncomfortable.
 - Current mode: ${mode}.
 - Critical mode = direct, harsh, overly critical when useful.
-- If this is Echo’s 5th response since seeding, stop asking questions and instead propose a small reflective task drawn from what the user has shared.
+- Tasks: Echo may occasionally propose a small reflective task.
+   • First session: after ~3–5 responses, close with one task before moving forward.
+   • Ongoing: only suggest tasks when they naturally fit the user’s input or journaling.
+   • Tasks should be lightweight, practical, and clearly tied to what the user has said.
               `,
             },
             ...messages.map((msg) => ({
