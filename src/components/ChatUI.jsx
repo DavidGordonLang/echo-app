@@ -5,8 +5,8 @@ const ChatUI = () => {
   const [input, setInput] = useState("");
   const [seed, setSeed] = useState(null);
   const chatRef = useRef(null);
-  const DEBUG = true; // Set to false to hide console logs
 
+  // Pull seed data from localStorage
   useEffect(() => {
     const storedSeed = localStorage.getItem("echo_seed");
     if (storedSeed) {
@@ -15,34 +15,21 @@ const ChatUI = () => {
     }
   }, []);
 
+  // Kick off the first Echo message once seed is loaded
   useEffect(() => {
     if (seed && messages.length === 0) {
-      sendMessageToGPT(
-        "[SYSTEM INIT] Begin with one gentle but insightful question based on the user's seed data.",
-        true
-      );
+      sendMessageToGPT("Begin with one gentle but insightful question based on the user's seed data.");
     }
   }, [seed]);
 
-  const buildSystemPrompt = () => {
-    if (!seed) return "";
-    return (
-      "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading.\n\n" +
-      "Seed reflections provided by the user include:\n" +
-      seed.map((s, i) => `${i + 1}. ${s}`).join("\n") +
-      "\n\nUse these to guide your tone, questions, and support. Begin with one gentle but insightful question based on the above."
-    );
-  };
-
-  const sendMessageToGPT = async (text, isSystem = false) => {
+  const sendMessageToGPT = async (text) => {
     if (!text.trim()) return;
 
-    if (!isSystem) {
-      setMessages((prev) => [...prev, { from: "user", text }]);
-    }
+    const userMsg = { from: "user", text };
+    setMessages((prev) => [...prev, userMsg]);
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,30 +40,27 @@ const ChatUI = () => {
           messages: [
             {
               role: "system",
-              content: buildSystemPrompt(),
+              content:
+                "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: " +
+                JSON.stringify(seed),
             },
-            ...messages
-              .filter((msg) => msg.from !== "system")
-              .map((msg) => ({
-                role: msg.from === "user" ? "user" : "assistant",
-                content: msg.text,
-              })),
+            ...messages.map((msg) => ({
+              role: msg.from === "user" ? "user" : "assistant",
+              content: msg.text,
+            })),
             { role: "user", content: text },
           ],
         }),
       });
 
-      const data = await response.json();
-      if (DEBUG) console.log("GPT API response:", data);
+      const data = await res.json();
+      console.log("🔍 OpenAI API Response:", data);
 
-      const reply = data.choices?.[0]?.message?.content;
-      if (reply) {
-        setMessages((prev) => [...prev, { from: "echo", text: reply }]);
-      } else {
-        console.error("No reply from GPT:", data);
-      }
+      const reply = data?.choices?.[0]?.message?.content || "Sorry, I didn’t catch that. Try again?";
+      setMessages((prev) => [...prev, { from: "echo", text: reply }]);
     } catch (err) {
       console.error("API Error:", err);
+      setMessages((prev) => [...prev, { from: "echo", text: "There was a problem reaching Echo. Try again shortly." }]);
     }
 
     setInput("");
