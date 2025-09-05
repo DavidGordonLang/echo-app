@@ -4,6 +4,7 @@ const ChatUI = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [seed, setSeed] = useState(null);
+  const [initialised, setInitialised] = useState(false);
   const chatRef = useRef(null);
 
   // Pull seed data from localStorage
@@ -15,14 +16,50 @@ const ChatUI = () => {
     }
   }, []);
 
-  // Kick off the first Echo message once seed is loaded
+  // Initialise Echo once with seed
   useEffect(() => {
-    if (seed && messages.length === 0) {
-      sendMessageToGPT(
-        "Begin with one gentle but insightful question based on the user's seed data."
-      );
+    if (seed && !initialised) {
+      initialiseEcho(seed);
+      setInitialised(true);
     }
-  }, [seed]);
+  }, [seed, initialised]);
+
+  const initialiseEcho = async (seedData) => {
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: " +
+                JSON.stringify(seedData) +
+                ". Begin with one gentle but insightful question based on the above.",
+            },
+          ],
+        }),
+      });
+
+      const data = await res.json();
+      console.log("🔍 Initial Echo Response:", data);
+
+      const reply =
+        data?.choices?.[0]?.message?.content ||
+        "Sorry, I didn’t catch that. Try again?";
+      setMessages([{ from: "echo", text: reply }]);
+    } catch (err) {
+      console.error("🚨 Init Error:", err);
+      setMessages([
+        { from: "echo", text: "There was a problem reaching Echo. Try again shortly." },
+      ]);
+    }
+  };
 
   const sendMessageToGPT = async (text) => {
     if (!text.trim()) return;
@@ -56,14 +93,14 @@ const ChatUI = () => {
       });
 
       const data = await res.json();
-      console.log("🔍 OpenAI API Response:", data);
+      console.log("🔍 Echo Response:", data);
 
       const reply =
         data?.choices?.[0]?.message?.content ||
         "Sorry, I didn’t catch that. Try again?";
       setMessages((prev) => [...prev, { from: "echo", text: reply }]);
     } catch (err) {
-      console.error("🚨 API Error:", err);
+      console.error("🚨 Chat Error:", err);
       setMessages((prev) => [
         ...prev,
         { from: "echo", text: "There was a problem reaching Echo. Try again shortly." },
