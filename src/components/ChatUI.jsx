@@ -7,16 +7,32 @@ const ChatUI = () => {
   const [initialised, setInitialised] = useState(false);
   const chatRef = useRef(null);
 
-  // Pull seed data from localStorage
+  // Mode can be switched in future via UI
+  const mode = "balanced"; // options: balanced, mirror, analyst, guide, scribe, critical
+
+  // Load seed from localStorage
   useEffect(() => {
     const storedSeed = localStorage.getItem("echo_seed");
     if (storedSeed) {
       const parsed = JSON.parse(storedSeed);
       setSeed(parsed.answers);
     }
+
+    // Reload old conversation if available
+    const storedMessages = localStorage.getItem("echo_messages");
+    if (storedMessages) {
+      setMessages(JSON.parse(storedMessages));
+    }
   }, []);
 
-  // Initialise Echo once with seed
+  // Save conversation history to localStorage on every change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("echo_messages", JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // Initialise Echo with seed
   useEffect(() => {
     if (seed && !initialised) {
       initialiseEcho(seed);
@@ -37,18 +53,24 @@ const ChatUI = () => {
           messages: [
             {
               role: "system",
-              content:
-                "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: " +
-                JSON.stringify(seedData) +
-                ". Begin with one gentle but insightful question based on the above.",
+              content: `
+You are Echo — not a chatbot or life coach. You are a mirror, challenger, and contextual companion.
+Seed data: ${JSON.stringify(seedData)}
+
+Core rules:
+- Echo is conversational, not scripted. You don’t have to ask a question every time. Expand, reflect, or challenge when it makes sense.
+- Avoid repeating questions or points already raised in this conversation.
+- Balance warmth with confrontation: supportive but not flattering.
+- Never generic or cliché. No “you’ve got this.”
+- Push toward clarity and insight, even if uncomfortable.
+- Current mode: ${mode}. If mode=critical, be direct, harsh, and overly critical when useful.
+              `,
             },
           ],
         }),
       });
 
       const data = await res.json();
-      console.log("🔍 Initial Echo Response:", data);
-
       const reply =
         data?.choices?.[0]?.message?.content ||
         "Sorry, I didn’t catch that. Try again?";
@@ -79,9 +101,18 @@ const ChatUI = () => {
           messages: [
             {
               role: "system",
-              content:
-                "You are Echo, a deeply personalised assistant. Your job is to reflect the user's thoughts back to them clearly, honestly, and without cheerleading. Use the following seed data to guide tone, questions, and support: " +
-                JSON.stringify(seed),
+              content: `
+You are Echo — not a chatbot or life coach. You are a mirror, challenger, and contextual companion.
+Seed data: ${JSON.stringify(seed)}
+
+Core rules:
+- Echo is conversational, not scripted. You don’t have to ask a question every time. Expand, reflect, or challenge when it makes sense.
+- Avoid repeating questions or points already raised in this conversation.
+- Balance warmth with confrontation: supportive but not flattering.
+- Never generic or cliché. No “you’ve got this.”
+- Push toward clarity and insight, even if uncomfortable.
+- Current mode: ${mode}. If mode=critical, be direct, harsh, and overly critical when useful.
+              `,
             },
             ...messages.map((msg) => ({
               role: msg.from === "user" ? "user" : "assistant",
@@ -93,8 +124,6 @@ const ChatUI = () => {
       });
 
       const data = await res.json();
-      console.log("🔍 Echo Response:", data);
-
       const reply =
         data?.choices?.[0]?.message?.content ||
         "Sorry, I didn’t catch that. Try again?";
