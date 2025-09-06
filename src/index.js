@@ -1,9 +1,10 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
+import { createRoot } from "react-dom/client";
+import App from "./App.jsx";
+import "./suiteBus.js"; // <-- Suite Bridge (localStorage)
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
+const rootEl = document.getElementById("root");
+createRoot(rootEl).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
